@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="utils.js"></script>
+</head>
+<body>
+
+    <h1>Create Product</h1>
+    <hr>
+    <form id="theForm">
+        <input name="name" placeholder="Product name"><br>
+        <input name="description" placeholder="description"><br>
+        <input name="category_id" placeholder="Category ID (1-7)"><br>
+        <input name="details" placeholder="Details"><br>
+        <input name="price" placeholder="Price"><br>
+        <input name="thumb" type="file"><br>
+        <hr>
+        <input type="submit" value="Add dummy product">
+    </form>
+    <script>
+
+        let theForm = document.getElementById('theForm');
+        //url to products
+        const url = `https://sukkergris.onrender.com/webshop/testdummy/products?key=${groupkey}`;
+        //---------------------------------------------------------
+         
+        theForm.addEventListener('submit', async function (evt) {
+            evt.preventDefault();
+            const productForm = new FormData(theForm);
+            const cfg = {
+                method: "POST",
+                body: productForm  //NB! product as formdata
+            }
+            try {
+                const dataFromServer = await sendRequest(url, cfg); //using sendRequest in utils.js
+                console.log(dataFromServer);
+            } catch (error) {
+                errorHandler(error); //using errorHandler in utils.js                
+            }
+        });
+    </script>
+</body>
+</html>

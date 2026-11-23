@@ -1,0 +1,99 @@
+
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Produktliste - Sukkergris</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="utils.js"></script>
+</head>
+<body>
+    <h1>Produktliste</h1>
+    <hr>
+    <button onclick="window.location.href='shoppingCart.html'">
+        Gå til handlekurv
+    </button>
+    <button onclick="window.location.href='index.html'">
+        Tilbake til forsiden
+    </button>
+    <hr>
+    <div id="container"></div>
+    <script>
+        // Henter containeren fra HTML
+        const container = document.getElementById("container");
+        // Henter kategori og søkeord fra localStorage
+        const catId = localStorage.getItem("catId");
+        const searchWord = localStorage.getItem("searchWord");
+        // Gruppenøkkelen
+        const groupKey = "HKFUMM51";
+        // Lager API-adressen basert på søk eller kategori
+        let url;
+
+        if (searchWord) {
+            url = `https://sukkergris.onrender.com/webshop/chocolates?search=${encodeURIComponent(searchWord)}&key=${groupKey}`;
+        } else {
+            url = `https://sukkergris.onrender.com/webshop/chocolates?catID=${catId}&key=${groupKey}`;
+        }
+        loadData();
+        //----------------------------------------------------------------
+        async function loadData() {
+            try {
+                const dataFromServer = await sendRequest(url);
+                refresh(dataFromServer);
+            } catch (error) {
+                errorHandler(error);
+            }
+        }
+        //----------------------------------------------------------------
+        function refresh(data) {
+            console.log(data);
+            container.innerHTML = "";
+            // Filtrerer produktene etter søkeordet
+            if (searchWord) {
+                data = data.filter(value =>
+                    value.chocoName.toLowerCase().includes(
+                        searchWord.toLowerCase()
+                    )
+                );
+            }
+            // Viser melding dersom ingen produkter ble funnet
+            if (data.length === 0) {
+                container.textContent =
+                    "Your search did not match any products";
+                return;
+            }
+            // Går gjennom alle produktene
+            for (let value of data) {
+                const div = document.createElement("div");
+                // Velger riktig nøkkel for produktbildet
+                const imageKey = value.static
+                    ? "GFTPOE21"
+                    : groupKey;
+                // Lager adressen til det lille produktbildet
+                const imageUrl =
+                    `https://sukkergris.onrender.com/images/${imageKey}/small/${value.thumb}`;
+                // Viser bilde, navn, beskrivelse og pris
+                div.innerHTML = `
+                    <img src="${imageUrl}"
+                         alt="${value.chocoName}"
+                         width="100">
+
+                    <h2>${value.chocoName}</h2>
+                    <p>${value.shortDescr}</p>
+                    <p>Pris: ${value.price} kr</p>
+                    <hr>
+                `;
+                // Åpner produktdetaljer når brukeren klikker
+                div.addEventListener("click", () => {
+                    // Lagrer ID-en til produktet
+                    localStorage.setItem("productId", value.id);
+                    // Går til produktdetaljsiden
+                    window.location.href = "productDetail.html";
+                });
+                container.appendChild(div);
+            }
+        }
+    </script>
+</body>
+</html>

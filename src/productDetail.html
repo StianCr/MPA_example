@@ -1,0 +1,187 @@
+
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Produktdetaljer - Sukkergris</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="utils.js"></script>
+</head>
+<body>
+    <h1>Produktdetaljer</h1>
+    <hr>
+    <div id="container"></div>
+    <button id="buyButton" disabled>
+        Kjøp produkt
+    </button>
+    <button onclick="window.location.href='productList.html'">
+        Tilbake til produktlisten
+    </button>
+    <button onclick="window.location.href='index.html'">
+        Tilbake til forsiden
+    </button>
+    <button onclick="window.location.href='shoppingCart.html'">
+        Gå til handlekurv
+    </button>
+    <script>
+        // Henter elementene fra HTML
+        const container = document.getElementById("container");
+        const buyButton = document.getElementById("buyButton");
+        // Henter ID-en til produktet som ble valgt
+        const productId = localStorage.getItem("productId");
+        // Skriv inn gruppenøkkelen 
+        const groupKey = "HKFUMM51";
+        // Lager API-adressen til det valgte produktet
+        const url =
+            `https://sukkergris.onrender.com/webshop/chocolates?id=${productId}&key=${groupKey}`;
+        // Henter produktet når siden åpnes
+        loadData();
+        //----------------------------------------------------------------
+        async function loadData() {
+            try {
+        
+                // Henter produktinformasjon fra serveren
+                const dataFromServer = await sendRequest(url);
+                // Viser produktinformasjonen
+                refresh(dataFromServer);
+            } catch (error) {
+                // Viser feilmelding dersom noe går galt
+                errorHandler(error);
+            }
+        }
+        //----------------------------------------------------------------
+        function refresh(data) {
+            console.log(data);
+            // Tømmer containeren
+            container.innerHTML = "";
+            // Henter produktet fra serverens svar
+            const product = Array.isArray(data) ? data[0] : data;
+            // Sjekker om produktet finnes
+            if (!product) {
+                container.textContent = "Fant ikke produktet.";
+                return;
+            }
+            // Velger riktig nøkkel for produktbildet
+            const imageKey = product.static
+                ? "GFTPOE21"
+                : groupKey;
+            // Lager adressen til produktbildet
+            const imageUrl =
+                `https://sukkergris.onrender.com/images/${imageKey}/small/${product.thumb}`;
+            // Henter rabattprosenten
+            const discount = Number(product.discount);
+            // Lager rabattetikett dersom produktet har rabatt
+            let discountText = "";
+
+            if (discount > 0) {
+                discountText = `
+                    <span class="discount-badge">
+                        -${discount} %
+                    </span>
+                `;
+            }
+            // Sjekker om produktet er på lager
+            let stockText = "";
+            if (Number(product.stock) > 0) {
+                // Viser antall produkter på lager
+                stockText = `Antall på lager: ${product.stock}`;
+            } else {
+                // Viser melding dersom produktet er utsolgt
+                stockText = "Produktet er utsolgt.";
+                // Sjekker om forventet leveringsdato finnes
+                if (product.expected_shipped) {
+                    // Gjør datoen om til norsk datoformat
+                    const dato = new Date(product.expected_shipped);
+                    if (!isNaN(dato.getTime())) {
+                        stockText +=
+                            ` Forventet levering: ${dato.toLocaleDateString("no-NO")}`;
+                    }
+                }
+            }
+            // Henter kundevurderingen fra produktet
+            const rating = Number(product.rating);
+            const numberOfRatings = Number(product.number_of_ratings);
+            let ratingText = "";
+
+            // Viser stjerner dersom produktet har vurderinger
+            if (
+                product.rating !== null &&
+                product.rating !== undefined &&
+                numberOfRatings > 0 &&
+                rating >= 1 &&
+                rating <= 5
+            ) {
+                // Runder vurderingen til nærmeste hele stjerne
+                const stars = Math.round(rating);
+                // Lager fylte og tomme stjerner
+                const filledStars = "★".repeat(stars);
+                const emptyStars = "☆".repeat(5 - stars);
+                // Lager teksten som viser kundevurderingen
+                ratingText = `
+                    <p>
+                        Kundevurdering:
+                        <span class="rating-stars">
+                            ${filledStars}${emptyStars}
+                        </span>
+                        (${rating} av 5)
+                    </p>
+                `;
+            }
+
+            // Viser produktinformasjonen på nettsiden
+            container.innerHTML = `
+                <h2>${product.chocoName}</h2>
+
+                <div class="product-image">
+                    <img src="${imageUrl}"
+                         alt="${product.chocoName}"
+                         width="300">
+                    ${discountText}
+                </div>
+                <p>${product.descr}</p>
+                <p>Pris: ${product.price} kr</p>
+                <p>Produktkategori: ${product.category_name}</p>
+                <p>${stockText}</p>
+                ${ratingText}
+                <hr>
+            `;
+            // Aktiverer kjøpsknappen hvis produktet er på lager
+            buyButton.disabled = Number(product.stock) <= 0;
+            // Legger produktet i handlekurven når knappen klikkes
+            buyButton.onclick = function () {
+                // Henter handlekurven fra localStorage
+                let cart = JSON.parse(localStorage.getItem("cart")) || [];
+                // Sjekker om produktet allerede ligger i handlekurven
+                const existingProduct = cart.find(
+                    item => Number(item.id) === Number(product.id)
+                );
+                if (existingProduct) {
+                    // Kontrollerer at det finnes nok på lager
+                    if (existingProduct.quantity >= Number(product.stock)) {
+                        alert("Du kan ikke legge til flere enn det som er på lager.");
+                        return;
+                    }
+                    // Øker antallet med én
+                    existingProduct.quantity++;
+                } else {
+                    // Legger et nytt produkt i handlekurven
+                    cart.push({
+                        id: product.id,
+                        name: product.chocoName,
+                        price: Number(product.price),
+                        quantity: 1
+                    });
+                }
+                // Lagrer handlekurven i localStorage
+                localStorage.setItem("cart", JSON.stringify(cart));
+                // Viser bekreftelse til brukeren
+                alert("Produktet er lagt i handlekurven!");
+            };
+        }
+
+    </script>
+
+</body>
+
+</html>

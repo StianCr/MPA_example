@@ -1,0 +1,195 @@
+
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Handlekurv - Sukkergris</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>Handlekurv</h1>
+    <hr>
+    <div id="cartContainer"></div>
+    <h2 id="totalPrice">Totalpris: 0 kr</h2>
+    <button id="emptyCartButton">
+        Tøm handlekurv
+    </button>
+    <button onclick="window.location.href='index.html'">
+        Tilbake til forsiden
+    </button>
+    <button id="checkoutButton">
+        Gå til kassen
+    </button>
+    <script>
+        // Henter elementene fra HTML
+        const cartContainer = document.getElementById("cartContainer");
+        const totalPrice = document.getElementById("totalPrice");
+        const emptyCartButton = document.getElementById("emptyCartButton");
+        const checkoutButton = document.getElementById("checkoutButton");
+        // Henter handlekurven fra localStorage
+        let cart = JSON.parse(localStorage.getItem("cart")) || [];
+
+        //Gruppenøkkelen
+        const groupKey = "HKFUMM51";
+        // Henter oppdaterte produktopplysninger fra API-et
+        loadProducts();
+        //------------------------------------------------------------
+        async function loadProducts() {
+            try {
+                // Henter produktdata fra serveren
+                const response = await fetch(
+                    `https://sukkergris.onrender.com/webshop/chocolates?key=${groupKey}`
+                );
+                if (!response.ok) {
+                    throw new Error("Kunne ikke hente produkter.");
+                }
+                const products = await response.json();
+                // Oppdaterer handlekurven med lagerstatus og leveringsdato
+                for (let item of cart) {
+
+                    const product = products.find(
+                        p => Number(p.id) === Number(item.id)
+                    );
+                    if (product) {
+                        item.stock = Number(product.stock);
+                        item.expected_shipped = product.expected_shipped;
+                        item.product_num = product.product_num;
+                    }
+                }
+                // Viser handlekurven
+                refresh();
+            } catch (error) {
+                console.error(error);
+                // Viser handlekurven selv om API-et ikke svarer
+                refresh();
+            }
+        }
+        //------------------------------------------------------------
+        function saveCart() {
+
+            // Lagrer handlekurven i nettleseren
+            localStorage.setItem("cart", JSON.stringify(cart));
+        }
+        //------------------------------------------------------------
+        function refresh() {
+            // Tømmer innholdet før handlekurven tegnes på nytt
+            cartContainer.innerHTML = "";
+            // Sjekker om handlekurven er tom
+            if (cart.length === 0) {
+
+                cartContainer.innerHTML = "<p>Handlekurven er tom.</p>";
+                totalPrice.textContent = "Totalpris: 0 kr";
+                emptyCartButton.disabled = true;
+                checkoutButton.disabled = true;
+                return;
+            }
+            emptyCartButton.disabled = false;
+            checkoutButton.disabled = false;
+            let total = 0;
+            // Går gjennom alle produktene i handlekurven
+            for (let item of cart) {
+                // Regner ut totalpris for dette produktet
+                const itemTotal = item.price * item.quantity;
+                // Legger produktets pris til totalsummen
+                total += itemTotal;
+                // Lager et HTML-element for produktet
+                const div = document.createElement("div");
+                // Lager tekst for lagerstatus
+                let stockText = "";
+                if (item.stock !== undefined && item.stock <= 0) {
+                    stockText = "<p>Produktet er utsolgt.</p>";
+                    // Viser forventet leveringsdato hvis den finnes
+                    if (item.expected_shipped) {
+                        const dato = new Date(item.expected_shipped);
+                        if (!isNaN(dato.getTime())) {
+                            stockText += `
+                                <p>Forventet levering:
+                                ${dato.toLocaleDateString("no-NO")}</p>
+                            `;
+                        }
+                    }
+                }
+                // Viser produktinformasjonen
+                div.innerHTML = `
+                    <h2>${item.name}</h2>
+                    <p>Produktnummer: ${item.product_num || item.id}</p>
+                    <p>Pris per produkt: ${item.price} kr</p>
+                    <label>Antall:</label>
+                    <input
+                        type="number"
+                        min="1"
+                        value="${item.quantity}"
+                        class="quantity-input"
+                    >
+                    <p>Samlet pris: <span class="item-total">${itemTotal}</span> kr</p>
+                    ${stockText}
+                    <button class="delete-button">
+                        Slett produkt
+                    </button>
+                    <hr>
+                `;
+                cartContainer.appendChild(div);
+                // Henter antallsfeltet til produktet
+                const quantityInput = div.querySelector(".quantity-input");
+                // Oppdaterer antallet når brukeren endrer det
+                quantityInput.addEventListener("change", function () {
+                    const newQuantity = Number(quantityInput.value);
+                    // Kontrollerer at antallet er gyldig
+                    if (!Number.isInteger(newQuantity) || newQuantity < 1) {
+                        alert("Antallet må være minst 1.");
+                        refresh();
+                        return;
+                    }
+                    // Kontrollerer at antallet ikke overstiger lager
+                    if (
+                        item.stock !== undefined &&
+                        item.stock > 0 &&
+                        newQuantity > item.stock
+                    ) {
+                        alert("Du kan ikke velge flere enn det som er på lager.");
+                        refresh();
+                        return;
+                    }
+                    // Oppdaterer antallet
+                    item.quantity = newQuantity;
+                    // Lagrer og viser den oppdaterte handlekurven
+                    saveCart();
+                    refresh();
+                });
+                // Henter sletteknappen
+                const deleteButton = div.querySelector(".delete-button");
+                // Sletter produktet når knappen klikkes
+                deleteButton.addEventListener("click", function () {
+                    cart = cart.filter(
+                        p => Number(p.id) !== Number(item.id)
+                    );
+
+                    saveCart();
+                    refresh();
+                });
+            }
+            // Viser totalprisen for alle produktene
+            totalPrice.textContent = `Totalpris: ${total} kr`;
+        }
+        //------------------------------------------------------------
+        // Tømmer hele handlekurven
+        emptyCartButton.addEventListener("click", function () {
+            const confirmed = confirm(
+                "Er du sikker på at du vil tømme handlekurven?"
+            );
+            if (confirmed) {
+                cart = [];
+                saveCart();
+                refresh();
+            }
+        });
+        //------------------------------------------------------------
+        // Åpner betalingssiden
+        checkoutButton.addEventListener("click", function () {
+            window.location.href = "checkout.html";
+        });
+    </script>
+</body>
+
+</html>

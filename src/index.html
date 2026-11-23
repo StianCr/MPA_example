@@ -1,0 +1,84 @@
+
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forside - Sukkergris</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="utils.js"></script>
+</head>
+<body>
+    <div class="search-container">
+        <input type="text" id="searchInput"
+               placeholder="Søk etter produkter...">
+        <button id="searchButton">Søk</button>
+    </div>
+    <button onclick="window.location.href='shoppingCart.html'">
+        Gå til handlekurv
+    </button>
+    <p>
+        <a href="productCreate.html">Create Product</a>
+    </p>
+    <hr>
+    <h1>Category list</h1>
+    <hr>
+    <div id="container"></div>
+    <script>
+        // Henter containeren fra HTML
+        const container = document.getElementById("container");
+        // Gruppenøkkelen 
+        const groupKey = "HKFUMM51";
+        // API-adresse for å hente kategorier
+        const url = `https://sukkergris.onrender.com/webshop/categories?key=${groupKey}`;
+    
+        loadData();
+        //----------------------------------------------------------------
+        async function loadData() {
+            try {
+                const dataFromServer = await sendRequest(url);
+                refresh(dataFromServer);
+            } catch (error) {
+                errorHandler(error);
+            }
+        }
+        //----------------------------------------------------------------
+        function refresh(data) {
+            console.log(data);
+            container.innerHTML = "";
+            
+            // Går gjennom alle kategoriene
+            for (let value of data) {
+                const div = document.createElement("div");
+                div.innerHTML = `
+                    <h2>${value.id} ${value.category_name}</h2>
+                    <p>${value.description}</p>
+                    <hr>
+                `;
+                // Lagrer kategorien og åpner produktlisten
+                div.addEventListener("click", () => {
+                    localStorage.setItem("catId", value.id);
+                    localStorage.removeItem("searchWord");
+                    window.location.href = "productList.html";
+                });
+                container.appendChild(div);
+            }
+        }
+        //----------------------------------------------------------------
+        // Henter søkefeltet og søkeknappen
+        const searchButton = document.getElementById("searchButton");
+        const searchInput = document.getElementById("searchInput");
+        // Søker etter produkter når brukeren klikker på knappen
+        searchButton.addEventListener("click", () => {
+            const searchWord = searchInput.value.trim();
+            if (searchWord !== "") {
+                localStorage.setItem("searchWord", searchWord);
+                localStorage.removeItem("catId");
+                window.location.href = "productList.html";
+            }
+        });
+    </script>
+</body>
+</html>
+
+
