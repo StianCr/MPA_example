@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="no">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Ordrebekreftelse - Sukkergris</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <h1>Ordrebekreftelse</h1>
+    <p>Bestillingen er sendt.</p>
+    <hr>
+    <h2>Kundeinformasjon</h2>
+    <div id="customerContainer"></div>
+    <hr>
+
+    <h2>Bestilte produkter</h2>
+    <div id="productContainer"></div>
+    <hr>
+    <h2>Leveringsinformasjon</h2>
+    <div id="shippingContainer"></div>
+    <hr>
+    <h2 id="totalPrice"></h2>
+
+    <button onclick="window.location.href='index.html'">
+        Tilbake til forsiden
+    </button>
+    <script>
+
+        // Henter bestillingen fra sessionStorage
+        const order = JSON.parse(
+            sessionStorage.getItem("order")
+        );
+
+        // Henter HTML-elementene
+        const customerContainer =
+            document.getElementById("customerContainer");
+
+        const productContainer =
+            document.getElementById("productContainer");
+
+        const shippingContainer =
+            document.getElementById("shippingContainer");
+
+        const totalPrice =
+            document.getElementById("totalPrice");
+        // Viser bestillingsinformasjonen
+        function showOrder() {
+
+            // Kontrollerer at det finnes en bestilling
+            if (!order) {
+
+                customerContainer.textContent =
+                    "Ingen bestilling funnet.";
+
+                return;
+            }
+
+            // Viser kundeinformasjonen
+            const customerInfo = [
+                `Navn: ${order.customer.firstName} ${order.customer.lastName}`,
+                `E-post: ${order.customer.email}`,
+                `Telefon: ${order.customer.phone}`,
+                `Adresse: ${order.customer.address}`,
+                `Postnummer: ${order.customer.zipCode}`,
+                `Poststed: ${order.customer.city}`
+            ];
+
+            for (let info of customerInfo) {
+
+                const p = document.createElement("p");
+
+                p.textContent = info;
+
+                customerContainer.appendChild(p);
+            }
+
+            // Går gjennom alle bestilte produkter
+            for (let item of order.products) {
+
+                const div = document.createElement("div");
+
+                const name = document.createElement("h3");
+
+                name.textContent = item.name;
+
+                const quantity = document.createElement("p");
+
+                quantity.textContent =
+                    `Antall: ${item.quantity}`;
+
+                const price = document.createElement("p");
+
+                price.textContent =
+                    `Pris per produkt: ${item.price} kr`;
+
+                const itemTotal = document.createElement("p");
+
+                itemTotal.textContent =
+                    `Samlet pris: ${item.price * item.quantity} kr`;
+
+                div.appendChild(name);
+                div.appendChild(quantity);
+                div.appendChild(price);
+                div.appendChild(itemTotal);
+
+                productContainer.appendChild(div);
+            }
+            // Viser valgt leveringsmetode
+            shippingContainer.textContent =
+            shippingContainer.textContent = `${order.shipping.type} - ${order.shipping.price} kr`; 
+
+            // Viser totalpris inkludert frakt
+            totalPrice.textContent =
+                `Totalpris: ${order.totalPrice} kr`;
+        }
+        showOrder();
+    </script>
+</body>
+</html>
